@@ -157,15 +157,24 @@ export const loginUser = asyncHandler(async (req, res) => {
 });
 
 /* ---------------------- VERIFY EMAIL ---------------------- */
+
 export const verifyEmail = asyncHandler(async (req, res) => {
   const token = req.params.token;
 
+  // ✅ HASH incoming token
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+
   const user = await User.findOne({
-    emailVerificationToken: token,
+    emailVerificationToken: hashedToken,
     emailVerificationExpiry: { $gt: Date.now() }, // not expired
   });
 
-  if (!user) throw new APIError(HTTP.BAD_REQUEST, "Invalid or expired token");
+  if (!user) {
+    throw new APIError(HTTP.BAD_REQUEST, "Invalid or expired token");
+  }
 
   user.isEmailVerified = true;
   user.emailVerificationToken = undefined;
@@ -177,6 +186,7 @@ export const verifyEmail = asyncHandler(async (req, res) => {
     .status(HTTP.OK)
     .json(new APIResponse(HTTP.OK, {}, "Email verified successfully"));
 });
+
 
 export const resendVerificationEmail = asyncHandler(async (req, res) => {
   const { email } = req.body;
